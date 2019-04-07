@@ -12,10 +12,12 @@ namespace FlightBooking.Core {
 
       private readonly ScheduledFlight _scheduledFlight;
       private readonly List<IPassengerSummary> _passengerSummaries;
+      private readonly List<IFlightValidator> _flightValidators;
 
-      public ScheduleFlightService(ScheduledFlight scheduledFlight, List<IPassengerSummary> passengerSummaries) {
+      public ScheduleFlightService(ScheduledFlight scheduledFlight, List<IPassengerSummary> passengerSummaries, List<IFlightValidator> flightValidators) {
          _scheduledFlight = scheduledFlight;
          _passengerSummaries = passengerSummaries;
+         _flightValidators = flightValidators;
       }
 
       public (List<string>, ConsoleColor?) ProcessCommand(string enteredText) {
@@ -32,6 +34,14 @@ namespace FlightBooking.Core {
             var passengerSegments = enteredText.Split(' ');
             _scheduledFlight.AddPassenger(new Passenger {
                Type = PassengerType.General,
+               Name = passengerSegments[2],
+               Age = Convert.ToInt32(passengerSegments[3])
+            });
+         }
+         else if (enteredText.Contains("add discounted")) {
+            var passengerSegments = enteredText.Split(' ');
+            _scheduledFlight.AddPassenger(new Passenger {
+               Type = PassengerType.Discounted,
                Name = passengerSegments[2],
                Age = Convert.ToInt32(passengerSegments[3])
             });
@@ -89,6 +99,13 @@ namespace FlightBooking.Core {
          result.Append(_newLine);
          result.Append(Indentation + "Airline employee comps: " + _scheduledFlight.Passengers.Count(p => p.Type == PassengerType.AirlineEmployee));
 
+         // we don't want to change the output in case we don't have any discounted members
+         var discountedPassengers = _scheduledFlight.Passengers.Count(p => p.Type == PassengerType.Discounted);
+         if (discountedPassengers > 0) {
+            result.Append(_newLine);
+            result.Append(Indentation + "Discounted member sales: " + discountedPassengers);
+         }
+
          result.Append(_verticalWhiteSpace);
          result.Append("Total expected baggage: " + flightsummary.TotalExpectedBaggage);
 
@@ -110,14 +127,21 @@ namespace FlightBooking.Core {
 
          result.Append(_verticalWhiteSpace);
 
-         if (flightsummary.ProfitSurplus > 0 &&
-             flightsummary.SeatsTaken < _scheduledFlight.Aircraft.NumberOfSeats &&
-             flightsummary.SeatsTaken / (double)_scheduledFlight.Aircraft.NumberOfSeats > _scheduledFlight.FlightRoute.MinimumTakeOffPercentage) {
-            result.Append("THIS FLIGHT MAY PROCEED");
+         var validationMessage = new List<string>();
+         var isValid = true;
+         foreach (var v in _flightValidators) {
+            var (vIsValid, vMessage) = v.Validate(flightsummary, _scheduledFlight);
+            isValid = isValid && vIsValid;
+            if (vMessage != null) {
+               validationMessage.AddRange(vMessage);
+            }
          }
-         else {
-            result.Append("FLIGHT MAY NOT PROCEED");
-         }
+
+         result.Append(isValid ? "THIS FLIGHT MAY PROCEED" : "FLIGHT MAY NOT PROCEED");
+         validationMessage?.ForEach(m => {
+            result.Append(_newLine);
+            result.Append(m);
+         });
 
          return result.ToString();
       }
