@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using FlightBooking.Core.Models;
 
 namespace FlightBooking.Core {
    public class ScheduleFlightService : IScheduleFlightService {
@@ -10,12 +11,16 @@ namespace FlightBooking.Core {
       private const string Indentation = "    ";
 
       private readonly ScheduledFlight _scheduledFlight;
+      private readonly List<IPassengerSummary> _passengerSummaries;
 
-      public ScheduleFlightService(ScheduledFlight scheduledFlight) {
+      public ScheduleFlightService(ScheduledFlight scheduledFlight, List<IPassengerSummary> passengerSummaries) {
          _scheduledFlight = scheduledFlight;
+         _passengerSummaries = passengerSummaries;
       }
 
       public (List<string>, ConsoleColor?) ProcessCommand(string enteredText) {
+         /// note : should require refactoring and be split into a separate service 
+         /// but for now we have to make do with it here
          ConsoleColor? color = null;
          List<string> messages = new List<string>();
 
@@ -58,50 +63,25 @@ namespace FlightBooking.Core {
       }
 
       public string GetSummary() {
-         double costOfFlight = 0;
-         double profitFromFlight = 0;
-         var totalLoyaltyPointsAccrued = 0;
-         var totalLoyaltyPointsRedeemed = 0;
-         var totalExpectedBaggage = 0;
-         var seatsTaken = 0;
+         var flightsummary = new FlightSummary();
 
          var result = new StringBuilder();
          result.Append("Flight summary for " + _scheduledFlight.FlightRoute.Title);
 
-         foreach (var passenger in _scheduledFlight.Passengers) {
-            switch (passenger.Type) {
-               case (PassengerType.General): {
-                     profitFromFlight += _scheduledFlight.FlightRoute.BasePrice;
-                     totalExpectedBaggage++;
-                     break;
-                  }
-               case (PassengerType.LoyaltyMember): {
-                     if (passenger.IsUsingLoyaltyPoints) {
-                        var loyaltyPointsRedeemed = Convert.ToInt32(Math.Ceiling(_scheduledFlight.FlightRoute.BasePrice));
-                        passenger.LoyaltyPoints -= loyaltyPointsRedeemed;
-                        totalLoyaltyPointsRedeemed += loyaltyPointsRedeemed;
-                     }
-                     else {
-                        totalLoyaltyPointsAccrued += _scheduledFlight.FlightRoute.LoyaltyPointsGained;
-                        profitFromFlight += _scheduledFlight.FlightRoute.BasePrice;
-                     }
-                     totalExpectedBaggage += 2;
-                     break;
-                  }
-               case (PassengerType.AirlineEmployee): {
-                     totalExpectedBaggage += 1;
-                     break;
-                  }
-               default:
-                  throw new ArgumentOutOfRangeException();
+         foreach (var p in _scheduledFlight.Passengers) {
+            foreach (var s in _passengerSummaries) {
+               var output = s.Process(_scheduledFlight, p);
+               flightsummary = flightsummary + output;
             }
-            costOfFlight += _scheduledFlight.FlightRoute.BaseCost;
-            seatsTaken++;
+
+            // we add them for all types ?!
+            flightsummary.CostOfFlight += _scheduledFlight.FlightRoute.BaseCost;
+            flightsummary.SeatsTaken++;
          }
 
          result.Append(_verticalWhiteSpace);
 
-         result.Append("Total passengers: " + seatsTaken);
+         result.Append("Total passengers: " + flightsummary.SeatsTaken);
          result.Append(_newLine);
          result.Append(Indentation + "General sales: " + _scheduledFlight.Passengers.Count(p => p.Type == PassengerType.General));
          result.Append(_newLine);
@@ -110,29 +90,29 @@ namespace FlightBooking.Core {
          result.Append(Indentation + "Airline employee comps: " + _scheduledFlight.Passengers.Count(p => p.Type == PassengerType.AirlineEmployee));
 
          result.Append(_verticalWhiteSpace);
-         result.Append("Total expected baggage: " + totalExpectedBaggage);
+         result.Append("Total expected baggage: " + flightsummary.TotalExpectedBaggage);
 
          result.Append(_verticalWhiteSpace);
 
-         result.Append("Total revenue from flight: " + profitFromFlight);
+         result.Append("Total revenue from flight: " + flightsummary.ProfitFromFlight);
          result.Append(_newLine);
-         result.Append("Total costs from flight: " + costOfFlight);
+         result.Append("Total costs from flight: " + flightsummary.CostOfFlight);
          result.Append(_newLine);
 
-         var profitSurplus = profitFromFlight - costOfFlight;
-
-         result.Append((profitSurplus > 0 ? "Flight generating profit of: " : "Flight losing money of: ") + profitSurplus);
-
-         result.Append(_verticalWhiteSpace);
-
-         result.Append("Total loyalty points given away: " + totalLoyaltyPointsAccrued + _newLine);
-         result.Append("Total loyalty points redeemed: " + totalLoyaltyPointsRedeemed + _newLine);
+         var surplusMessage = (flightsummary.ProfitSurplus > 0 ?
+            "Flight generating profit of: " : "Flight losing money of: ");
+         result.Append(surplusMessage + flightsummary.ProfitSurplus);
 
          result.Append(_verticalWhiteSpace);
 
-         if (profitSurplus > 0 &&
-             seatsTaken < _scheduledFlight.Aircraft.NumberOfSeats &&
-             seatsTaken / (double)_scheduledFlight.Aircraft.NumberOfSeats > _scheduledFlight.FlightRoute.MinimumTakeOffPercentage) {
+         result.Append("Total loyalty points given away: " + flightsummary.TotalLoyaltyPointsAccrued + _newLine);
+         result.Append("Total loyalty points redeemed: " + flightsummary.TotalLoyaltyPointsRedeemed + _newLine);
+
+         result.Append(_verticalWhiteSpace);
+
+         if (flightsummary.ProfitSurplus > 0 &&
+             flightsummary.SeatsTaken < _scheduledFlight.Aircraft.NumberOfSeats &&
+             flightsummary.SeatsTaken / (double)_scheduledFlight.Aircraft.NumberOfSeats > _scheduledFlight.FlightRoute.MinimumTakeOffPercentage) {
             result.Append("THIS FLIGHT MAY PROCEED");
          }
          else {

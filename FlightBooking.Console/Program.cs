@@ -5,7 +5,7 @@ namespace FlightBooking.Console {
    internal class Program {
       private static IScheduleFlightService _scheduleFlightService;
       private static void Main(string[] args) {
-         _scheduleFlightService = new ScheduleFlightService(TestData.SetupAirlineData());
+         _scheduleFlightService = IoC.GetInstance<IScheduleFlightService>();
 
          string command;
          do {

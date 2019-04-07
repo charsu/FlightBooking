@@ -9,7 +9,7 @@ namespace Tests {
 
       [Test, Category(Config.Integration)]
       public void ScheduledFlight_OK() {
-         var _scheduleFlightService = new ScheduleFlightService(TestData.SetupAirlineData());
+         var _scheduleFlightService = IoC.GetInstance<IScheduleFlightService>();
          var input = GetInitialExampleInput();
 
          input.ForEach(i => _scheduleFlightService.ProcessCommand(i));
