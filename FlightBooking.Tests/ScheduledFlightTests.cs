@@ -10,17 +10,17 @@ namespace Tests {
       [Test, Category(Config.Integration)]
       public void ScheduledFlight_OK() {
          var _scheduleFlightService = new ScheduleFlightService(TestData.SetupAirlineData());
-         var input = GetExampleInput();
+         var input = GetInitialExampleInput();
 
          input.ForEach(i => _scheduleFlightService.ProcessCommand(i));
          var output = _scheduleFlightService.GetSummary();
 
-         Assert.AreEqual(GetExampleOutput(), output);
+         Assert.AreEqual(GetInitialExampleOutput(), output);
       }
 
       #region test data 
 
-      internal List<string> GetExampleInput()
+      internal List<string> GetInitialExampleInput()
          => new List<string>() {
                "add general Steve 30",
                "add general Mark 12",
@@ -35,7 +35,7 @@ namespace Tests {
                "print summary"
          };
 
-      internal string GetExampleOutput()
+      internal string GetInitialExampleOutput()
          => string.Join(Environment.NewLine, new[]{
             "Flight summary for London to Paris",
             "",

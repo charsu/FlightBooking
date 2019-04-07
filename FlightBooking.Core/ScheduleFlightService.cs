@@ -49,9 +49,6 @@ namespace FlightBooking.Core {
                Age = Convert.ToInt32(passengerSegments[3]),
             });
          }
-         //else if (enteredText.Contains("exit")) {
-         //   Environment.Exit(1);
-         //}
          else {
             color = ConsoleColor.Red;
             messages.Add("UNKNOWN INPUT");
@@ -68,7 +65,8 @@ namespace FlightBooking.Core {
          var totalExpectedBaggage = 0;
          var seatsTaken = 0;
 
-         var result = "Flight summary for " + _scheduledFlight.FlightRoute.Title;
+         var result = new StringBuilder();
+         result.Append("Flight summary for " + _scheduledFlight.FlightRoute.Title);
 
          foreach (var passenger in _scheduledFlight.Passengers) {
             switch (passenger.Type) {
@@ -101,47 +99,47 @@ namespace FlightBooking.Core {
             seatsTaken++;
          }
 
-         result += _verticalWhiteSpace;
+         result.Append(_verticalWhiteSpace);
 
-         result += "Total passengers: " + seatsTaken;
-         result += _newLine;
-         result += Indentation + "General sales: " + _scheduledFlight.Passengers.Count(p => p.Type == PassengerType.General);
-         result += _newLine;
-         result += Indentation + "Loyalty member sales: " + _scheduledFlight.Passengers.Count(p => p.Type == PassengerType.LoyaltyMember);
-         result += _newLine;
-         result += Indentation + "Airline employee comps: " + _scheduledFlight.Passengers.Count(p => p.Type == PassengerType.AirlineEmployee);
+         result.Append("Total passengers: " + seatsTaken);
+         result.Append(_newLine);
+         result.Append(Indentation + "General sales: " + _scheduledFlight.Passengers.Count(p => p.Type == PassengerType.General));
+         result.Append(_newLine);
+         result.Append(Indentation + "Loyalty member sales: " + _scheduledFlight.Passengers.Count(p => p.Type == PassengerType.LoyaltyMember));
+         result.Append(_newLine);
+         result.Append(Indentation + "Airline employee comps: " + _scheduledFlight.Passengers.Count(p => p.Type == PassengerType.AirlineEmployee));
 
-         result += _verticalWhiteSpace;
-         result += "Total expected baggage: " + totalExpectedBaggage;
+         result.Append(_verticalWhiteSpace);
+         result.Append("Total expected baggage: " + totalExpectedBaggage);
 
-         result += _verticalWhiteSpace;
+         result.Append(_verticalWhiteSpace);
 
-         result += "Total revenue from flight: " + profitFromFlight;
-         result += _newLine;
-         result += "Total costs from flight: " + costOfFlight;
-         result += _newLine;
+         result.Append("Total revenue from flight: " + profitFromFlight);
+         result.Append(_newLine);
+         result.Append("Total costs from flight: " + costOfFlight);
+         result.Append(_newLine);
 
          var profitSurplus = profitFromFlight - costOfFlight;
 
-         result += (profitSurplus > 0 ? "Flight generating profit of: " : "Flight losing money of: ") + profitSurplus;
+         result.Append((profitSurplus > 0 ? "Flight generating profit of: " : "Flight losing money of: ") + profitSurplus);
 
-         result += _verticalWhiteSpace;
+         result.Append(_verticalWhiteSpace);
 
-         result += "Total loyalty points given away: " + totalLoyaltyPointsAccrued + _newLine;
-         result += "Total loyalty points redeemed: " + totalLoyaltyPointsRedeemed + _newLine;
+         result.Append("Total loyalty points given away: " + totalLoyaltyPointsAccrued + _newLine);
+         result.Append("Total loyalty points redeemed: " + totalLoyaltyPointsRedeemed + _newLine);
 
-         result += _verticalWhiteSpace;
+         result.Append(_verticalWhiteSpace);
 
          if (profitSurplus > 0 &&
              seatsTaken < _scheduledFlight.Aircraft.NumberOfSeats &&
              seatsTaken / (double)_scheduledFlight.Aircraft.NumberOfSeats > _scheduledFlight.FlightRoute.MinimumTakeOffPercentage) {
-            result += "THIS FLIGHT MAY PROCEED";
+            result.Append("THIS FLIGHT MAY PROCEED");
          }
          else {
-            result += "FLIGHT MAY NOT PROCEED";
+            result.Append("FLIGHT MAY NOT PROCEED");
          }
 
-         return result;
+         return result.ToString();
       }
    }
 }
